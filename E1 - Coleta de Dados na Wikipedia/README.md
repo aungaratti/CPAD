@@ -38,7 +38,7 @@ Tarefa 1 – Desenvolvendo um crawler
      Mathison Turing”.
      3. Pares chave– lista: nesse tipo de item, uma chave está associada a uma lista de valores.
      
-       Na figura de exemplo são pares de chave– lista os campos: Conhecido(a) por, Alma
+       Na figura de exemplo são pares de chave–lista os campos: Conhecido(a) por, Alma
      mater, Orientado(a)(s), Instituições e Campos
 
        Sua tarefa consiste em extrair o conteúdo das infoboxes de todas as páginas que foram 
