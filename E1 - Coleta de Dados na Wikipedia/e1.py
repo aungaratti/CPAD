@@ -4,16 +4,21 @@ from collections import deque
 import time
 import re
 import json
+import unicodedata
 
-# Define a base URL
 base_url = "https://pt.wikipedia.org"
 
-# Fila e conjunto de controle
 links_nao_visitados = deque(['/wiki/Wikip%C3%A9dia:P%C3%A1gina_principal'])
 visitados = set()
 
-# Loop principal
-while len(visitados) < 5 and links_nao_visitados:
+def sanitizar_nome(nome):
+    nome_normalizado = unicodedata.normalize('NFKD', nome)
+    nome_sem_acentos = ''.join(c for c in nome_normalizado if not unicodedata.combining(c))
+    nome_sanitizado = re.sub(r'[^a-zA-Z0-9 _-]', '', nome_sem_acentos)
+    return nome_sanitizado.replace(" ", "_")
+
+# ====== TAREFA 1 - EXTRAÇÃO DE PÁGINAS ======
+while len(visitados) < 5000 and links_nao_visitados:
     link_atual = links_nao_visitados.popleft()
 
     if link_atual in visitados:
@@ -36,21 +41,19 @@ while len(visitados) < 5 and links_nao_visitados:
         continue
 
     titulo = titulo_elemento.text.strip()
-    titulo_sanitizado = re.sub(r'[\\/*?:"<>|]', "_", titulo)
+    titulo_sanitizado = sanitizar_nome(titulo)
     nome_arquivo_html = f"{titulo_sanitizado}.html"
 
-    # Salva o HTML da página
     with open(nome_arquivo_html, "w", encoding="utf-8") as f:
         f.write(response.content.decode("utf-8"))
 
-        visitados.add(link_atual)
+    visitados.add(link_atual)
 
     # ====== TAREFA 2 - INFOBOX ======
     infobox = soup.find("table", class_="infobox")
     dados_infobox = {}
 
     if infobox:
-
         titulo_infobox = infobox.find("th")
         if titulo_infobox:
             dados_infobox["titulo"] = titulo_infobox.text.strip()
@@ -64,23 +67,23 @@ while len(visitados) < 5 and links_nao_visitados:
                 chave = tds[0].get_text(strip=True)
                 td_valor = tds[1]
 
-                # Verifica se o valor contém uma lista <li>
                 itens_lista = td_valor.find_all("li")
                 if itens_lista:
                     valor = [item.get_text(strip=True) for item in itens_lista]
                 else:
-                    # Se não for lista, extrai o texto direto, com vírgulas como separador se necessário
                     valor = td_valor.get_text(separator=", ", strip=True)
 
                 dados_infobox[chave] = valor
 
-        # Salva os dados da infobox em JSON
         if dados_infobox:
-            nome_arquivo_json = f"{titulo_sanitizado}.json"
+
+            titulo_arquivo = dados_infobox.get("titulo", titulo)
+            titulo_arquivo_sanitizado = sanitizar_nome(titulo_arquivo)
+            nome_arquivo_json = f"{titulo_arquivo_sanitizado}.json"
+
             with open(nome_arquivo_json, "w", encoding="utf-8") as json_file:
                 json.dump(dados_infobox, json_file, ensure_ascii=False, indent=2)
 
-    # Encontra novos links internos
     todos_links = soup.find_all("a", href=True)
     novos_links = []
 
@@ -91,6 +94,6 @@ while len(visitados) < 5 and links_nao_visitados:
                 novos_links.append(href)
 
     links_nao_visitados.extend(novos_links)
-    time.sleep(1)
+    time.sleep(0.5)
 
 print(f"Coleta finalizada: {len(visitados)} páginas salvas.")
